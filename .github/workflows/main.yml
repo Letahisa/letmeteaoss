@@ -17,7 +17,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16' # You can specify a different version if needed
+          node-version: '20' # You can specify a different version if needed
 
       - name: Install Dependencies
         run: npm install node-fetch@2 fs # node-fetch v2 is compatible with CommonJS
