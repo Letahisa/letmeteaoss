@@ -64,7 +64,7 @@ jobs:
           EOF
 
       - name: Upload combined file
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: active_proxies
           path: active_proxies.txt
