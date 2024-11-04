@@ -1,12 +1,9 @@
-name: Update Proxies
+name: Fetch and Combine Files
 
 on:
   schedule:
-    - cron: "*/10 * * * *" 
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+    - cron: '*/1 * * * *' # Menjalankan workflow setiap menit
+  workflow_dispatch: # Memungkinkan menjalankan workflow secara manual
 
 jobs:
   fetch-and-combine:
@@ -14,33 +11,57 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: '20' # You can specify a different version if needed
+          node-version: '16' # Versi Node.js yang sesuai
 
-      - name: Install Dependencies
-        run: npm install node-fetch@2 fs # node-fetch v2 is compatible with CommonJS
+      - name: Install dependencies
+        run: npm install node-fetch@2
 
-      - name: Run Script
+      - name: Create and run fetch and combine script
         run: |
-          node <<'EOF'
-          const fs = require('fs');
+          # Buat file script proxy.js
+          echo "const fs = require('fs');
           const fetch = require('node-fetch');
 
           const fileUrls = [
               'https://github.com/ErcinDedeoglu/proxies/raw/refs/heads/main/proxies/http.txt',
               'https://github.com/ErcinDedeoglu/proxies/raw/refs/heads/main/proxies/https.txt',
               'https://github.com/ErcinDedeoglu/proxies/raw/refs/heads/main/proxies/socks4.txt',
-              'https://github.com/ErcinDedeoglu/proxies/raw/refs/heads/main/proxies/socks5.txt'
+              'https://github.com/ErcinDedeoglu/proxies/raw/refs/heads/main/proxies/socks5.txt',
+              'https://github.com/hookzof/socks5_list/raw/refs/heads/master/proxy.txt',
+              'https://github.com/MyZest/update-live-socks5/raw/refs/heads/master/liveSocks5.txt',
+              'https://github.com/r00tee/Proxy-List/raw/refs/heads/main/Socks5.txt',
+              'https://github.com/r00tee/Proxy-List/raw/refs/heads/main/Socks4.txt',
+              'https://github.com/r00tee/Proxy-List/raw/refs/heads/main/Https.txt',
+              'https://github.com/babyhagey74/free-proxies/raw/refs/heads/main/proxies/http/http.txt',
+              'https://github.com/babyhagey74/free-proxies/raw/refs/heads/main/proxies/https/https.txt',
+              'https://github.com/babyhagey74/free-proxies/raw/refs/heads/main/proxies/socks4/socks4.txt',
+              'https://github.com/babyhagey74/free-proxies/raw/refs/heads/main/proxies/socks5/socks5.txt',
+              'https://github.com/Vann-Dev/proxy-list/raw/refs/heads/main/proxies/http.txt',
+              'https://github.com/Vann-Dev/proxy-list/raw/refs/heads/main/proxies/https.txt',
+              'https://github.com/Vann-Dev/proxy-list/raw/refs/heads/main/proxies/socks4.txt',
+              'https://github.com/Vann-Dev/proxy-list/raw/refs/heads/main/proxies/socks5.txt',
+              'https://github.com/zloi-user/hideip.me/raw/refs/heads/main/http.txt',
+              'https://github.com/zloi-user/hideip.me/raw/refs/heads/main/https.txt',
+              'https://github.com/zloi-user/hideip.me/raw/refs/heads/main/socks4.txt',
+              'https://github.com/zloi-user/hideip.me/raw/refs/heads/main/socks5.txt',
+              'https://github.com/ALIILAPRO/Proxy/raw/refs/heads/main/http.txt',
+              'https://github.com/ALIILAPRO/Proxy/raw/refs/heads/main/socks4.txt',
+              'https://github.com/ALIILAPRO/Proxy/raw/refs/heads/main/socks5.txt',
+              'https://github.com/sunny9577/proxy-scraper/raw/refs/heads/master/generated/http_proxies.txt',
+              'https://github.com/sunny9577/proxy-scraper/raw/refs/heads/master/generated/socks4_proxies.txt',
+              'https://github.com/sunny9577/proxy-scraper/raw/refs/heads/master/generated/socks5_proxies.txt',
+              
           ];
 
           async function fetchFileContent(url) {
               try {
                   const response = await fetch(url);
-                  if (!response.ok) throw new Error(`Failed to fetch file: ${url}`);
+                  if (!response.ok) throw new Error(\`Gagal mengambil file: \${url}\`);
                   return await response.text();
               } catch (error) {
                   console.error(error);
@@ -50,21 +71,26 @@ jobs:
 
           async function combineFiles() {
               let combinedContent = '';
-
               for (const url of fileUrls) {
                   const content = await fetchFileContent(url);
-                  combinedContent += content + '\n\n';
+                  combinedContent += content + '\\n\\n';
               }
-
               fs.writeFileSync('active_proxies.txt', combinedContent);
-              console.log('File successfully combined into active_proxies.txt');
+              console.log('File berhasil digabungkan ke active_proxies.txt');
           }
 
-          combineFiles();
-          EOF
+          combineFiles();" > proxy.js
+          
+          # Jalankan script
+          node proxy.js
 
-      - name: Upload combined file
-        uses: actions/upload-artifact@v4
-        with:
-          name: active_proxies
-          path: active_proxies.txt
+      - name: Commit and push changes
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "${{ secrets.EMAIL }}"
+          git add active_proxies.txt || echo "active_proxies.txt tidak ada"
+          git commit -m "Update active proxies" || echo "Tidak ada perubahan untuk di-commit"
+          git pull --rebase origin main || echo "Tidak ada perubahan dari remote untuk di-pull"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUBTOKEN }}
